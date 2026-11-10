@@ -1,0 +1,359 @@
+# ============================================================================
+# LaUER pretraining | SGL + CGL
+# Run with: python train.py --mode sgl+cgl --config configs/pretrain_SGL+CGL.yaml --init-from output/stage/lauer/sgl/best_weights.pt
+# Edit local weight/data paths and memory-related batch settings as needed.
+# Values are preserved from this release; see README.md for paper differences.
+# ============================================================================
+# Initialize from the SGL checkpoint with --init-from.
+# TGL settings are retained here but are not built in this stage.
+
+# ============================================================================
+# ECG waveform encoder: 12 leads, 10 seconds at 500 Hz.
+# ============================================================================
+ecg_encoder:
+  encoder_type: vit1d  # The supported waveform encoder is ViT-1D.
+  freeze: false  # Set true to stop updating the waveform encoder.
+  vit1d:
+    model_variant: tiny  # tiny/small/middle/base have widths 192/384/512/768.
+    seq_length: 5000  # 500 Hz x 10 seconds; input shape is [12, 5000].
+    lead_num: 12  # Number of waveform leads.
+    patch_size: 125  # 125 samples = 0.25 s; aligns with image patches.
+    checkpoint_path: ''  # Empty means random initialization; otherwise use compatible weights.
+    pos_embedding_type: concat  # Position embedding style used by this checkpoint family.
+    dropout: 0.1
+    drop_path_rate: 0.1
+
+# ============================================================================
+# ECG image encoder: the same recording rendered as a 12-lead image.
+# ============================================================================
+image_encoder:
+  encoder_type: vit2d  # The supported ECG image encoder is ViT-2D.
+  freeze: false  # Set true to stop updating the image encoder.
+  vit2d:
+    model_variant: tiny  # Match the waveform variant when using the supplied architecture.
+    image_height: 720  # 12 leads x 60 pixels per lead.
+    image_width: 1000  # 10 seconds x 100 pixels per second.
+    lead_num: 12  # Number of stacked image lead strips.
+    patch_height: 60  # One lead strip per image patch.
+    patch_width: 25  # 25 pixels = 0.25 s; aligns with waveform patches.
+    checkpoint_path: ''  # Empty means random initialization; otherwise use compatible weights.
+    pos_embedding_type: concat  # Position embedding style used by this checkpoint family.
+    dropout: 0.1
+    drop_path_rate: 0.1
+
+# ============================================================================
+# Frozen clinical-language encoders. Supply these model directories locally.
+# ============================================================================
+text_encoder:
+  model_name_or_path: weights/MedCPT-Article-Encoder  # MedCPT Article encoder for report [SEP] explanation.
+  query_model_name_or_path: weights/MedCPT-Query-Encoder  # MedCPT Query encoder for CGL disease concepts.
+  tokenizer_name_or_path: weights/MedCPT-Article-Encoder  # Tokenizer for the Article encoder and TGL text.
+  hidden_size: 768
+  max_length: 512  # Maximum SGL text-token length.
+  freeze: true  # The clinical-text encoder stays frozen.
+
+# ============================================================================
+# Modality adapters. SGL uses pooled embeddings; CGL uses signal/image tokens.
+# ============================================================================
+# proj1/proj2 are configurable MLPs: num_layers=1 uses one Linear layer;
+# activation, dropout, and LayerNorm still apply when configured.
+# num_layers=2 uses two Linear layers with a hidden layer.
+# layernorm_position controls where LayerNorm is applied.
+# ECG/image proj1.input_dim is derived from encoder width (tiny=192).
+# Their YAML value 768 is a placeholder; MedCPT text width is actually 768.
+projection:
+  use_shared_proj1: false  # False gives SGL and CGL separate signal/image projections.
+
+  # Waveform adapters.
+  ecg:
+    sgl:  # Pool waveform CLS, then map through proj1 and proj2.
+      proj1:
+        input_dim: 768
+        output_dim: 768
+        num_layers: 2
+        hidden_dim: 0
+        activation: gelu
+        layernorm: 1.0e-06
+        layernorm_position: hidden_pre
+        dropout: 0.05
+      proj2:
+        input_dim: 768
+        output_dim: 512
+        num_layers: 1
+        hidden_dim: 0
+        activation: none
+        layernorm: 0.0
+        layernorm_position: hidden_pre
+        dropout: 0.0
+      pooling: cls
+      lead_pooling_dim: 48
+    cgl:  # Project waveform tokens for fusion; inactive in SGL-only mode.
+      proj1:
+        input_dim: 768
+        output_dim: 768
+        num_layers: 2
+        hidden_dim: 1536
+        activation: gelu
+        layernorm: 1.0e-06
+        layernorm_position: hidden_pre
+        dropout: 0.1
+
+  # Image adapters.
+  image:
+    sgl:  # Pool image CLS, then map through proj1 and proj2.
+      proj1:
+        input_dim: 768
+        output_dim: 768
+        num_layers: 2
+        hidden_dim: 0
+        activation: gelu
+        layernorm: 1.0e-06
+        layernorm_position: hidden_pre
+        dropout: 0.05
+      proj2:
+        input_dim: 768
+        output_dim: 512
+        num_layers: 1
+        hidden_dim: 0
+        activation: none
+        layernorm: 0.0
+        layernorm_position: hidden_pre
+        dropout: 0.0
+      pooling: cls
+      lead_pooling_dim: 48
+    cgl:  # Project image tokens for fusion; inactive in SGL-only mode.
+      proj1:
+        input_dim: 768
+        output_dim: 768
+        num_layers: 2
+        hidden_dim: 1536
+        activation: gelu
+        layernorm: 1.0e-06
+        layernorm_position: hidden_pre
+        dropout: 0.1
+
+  # Clinical-text adapter. Text participates in SGL, not signal-image fusion.
+  text:
+    sgl:  # Pool Article-encoder CLS for semantic alignment.
+      proj1:
+        input_dim: 768
+        output_dim: 768
+        num_layers: 2
+        hidden_dim: 0
+        activation: gelu
+        layernorm: 1.0e-06
+        layernorm_position: hidden_pre
+        dropout: 0.05
+      proj2:
+        input_dim: 768
+        output_dim: 512
+        num_layers: 1
+        hidden_dim: 0
+        activation: none
+        layernorm: 0.0
+        layernorm_position: hidden_pre
+        dropout: 0.0
+      pooling: cls
+    cgl:  # Schema placeholder; no text CGL adapter is instantiated.
+      proj1:
+        input_dim: 768
+        output_dim: 768
+        num_layers: 2
+        hidden_dim: 1536
+        activation: gelu
+        layernorm: 1.0e-06
+        layernorm_position: hidden_pre
+        dropout: 0.1
+
+  # Bridge from fused ECG tokens to TGL cross-attention memory.
+  tgl_proj:
+    enable: false  # Built only in the final stage when true.
+    input_dim: 768
+    hidden_dim: 1536
+    output_dim: 768
+    num_layers: 2
+    activation: gelu
+    layernorm: 1.0e-06
+    layernorm_position: output
+    dropout: 0.1
+    allow_tgl_grad_to_encoder: true  # Let TGL loss update the fused ECG path.
+
+# ============================================================================
+# SGL: semantic alignment across signal, image, and clinical text.
+# ============================================================================
+sgl:
+  temperature: 0.07  # Initial InfoNCE temperature.
+  learnable_temp: true  # Train the inverse-temperature/logit-scale parameter.
+  temp_max: 100.0  # Upper bound on the learned logit scale.
+  loss_weights:  # Order: signal-text, image-text, signal-image.
+  - 0.4
+  - 0.4
+  - 0.2
+  sgl_in_global: 1.0  # Multiplier for SGL in the cumulative training loss.
+
+# ============================================================================
+# CGL: signal-image fusion, pair matching, and query-guided disease tracing.
+# ============================================================================
+cgl:
+  hidden_size: 768  # Width of fused signal-image tokens.
+  num_heads: 12  # Attention heads in the fusion blocks.
+  intermediate_size: 3072  # Fusion feed-forward width.
+  dropout: 0.1
+  cgl_head_dropout: 0.1  # Dropout in the pair-matching head.
+  cgl_in_global: 1.0  # Multiplier for CGL; zero in SGL-only mode.
+  loss_weights:  # Order: pair-matching loss, multilabel disease loss.
+  - 0.2
+  - 0.8
+
+  # Three alternating fusion blocks in the CGL stages.
+  fusion:
+    num_layers: 3  # Number of alternating fusion blocks.
+    simple_num_layers: 1  # Used only if num_layers is set to zero.
+    layer1_primary: image  # Start fusion from image tokens.
+    cross_kv_sequence:  # Original memory read by each block, in order.
+    - ecg
+    - image
+    - ecg
+    detach_cross_kv:  # Whether each source memory stops its gradient.
+    - false
+    - false
+    - false
+
+  # Query-guided tracing head for independent disease concepts.
+  multilabel:
+    num_layers: 3  # Depth of the query-guided tracing head.
+    num_heads: 12
+    intermediate_size: 3072
+    dropout: 0.1
+    query_proj_hidden: 768
+    query_self_attn: true  # Allow disease queries to interact in each block.
+    query_proj: true  # Project frozen MedCPT disease queries before attention.
+    loss_type: bce  # bce matches the paper; asl is an optional alternative.
+    asl_gamma_pos: 0.0
+    asl_gamma_neg: 1.0
+    asl_clip: 0.02
+    asl_eps: 1.0e-08
+
+# ============================================================================
+# TGL: token-level report and explanation generation.
+# ============================================================================
+# The TGL block stays in every YAML; --mode controls construction and
+# train.expected_mode checks that the selected YAML matches --mode.
+tgl:
+  mode: none  # none is inactive; ar enables causal report/explanation generation.
+  hidden_size: 768
+  vocab_size: 30522  # Must match the MedCPT Article tokenizer vocabulary.
+  num_layers: 6  # Number of autoregressive decoder blocks.
+  num_heads: 12
+  ffn_size: 3072
+  dropout: 0.1
+  report_mask_rate: 0.95  # Used only by the optional hybrid MLM mode.
+  full_mask_prob: 0.2  # Used only by the optional hybrid MLM mode.
+  full_mask_rampup: true  # Used only by the optional hybrid MLM mode.
+  mlm_loss_weight: 0.0  # Zero for the supplied pure-AR TGL objective.
+  ar_loss_weight: 1.0  # Multiplier for autoregressive token loss.
+  lm_weight: 1.0  # Global multiplier for TGL in the cumulative loss.
+  region_weights:  # Order: report region, explanation region.
+  - 0.5
+  - 0.5
+  max_generation_len: 512  # Default maximum generated token count.
+  temperature: 1.0
+  keyword_threshold: 0.9
+  medcpt_path: weights/MedCPT-Article-Encoder  # Initial token embeddings are loaded from this local model.
+
+# ============================================================================
+# Paired records, split annotations, text construction, and data loaders.
+# ============================================================================
+# Run from the repository root so relative paths resolve to these locations.
+data:
+  data_root: datasets/MEETI  # Root of paired MEETI MAT/PNG records; --data_root overrides it.
+  annotation_csv: data/annotations/train.csv  # Training split CSV with study_id and 169 disease labels.
+  val_annotation_csv: data/annotations/val.csv  # Validation split CSV; keep label columns in the same order.
+  test_annotation_csv: data/annotations/test.csv  # Test split CSV; keep label columns in the same order.
+  aug_signal: false  # Enable waveform augmentation for SGL training views.
+  aug_image: false  # Enable matched image augmentation for SGL training views.
+  aug_n_leads: 1  # Number of leads to mask when augmentation is enabled.
+  aug_scale_min: 0.85  # Lower amplitude scale when augmentation is enabled.
+  aug_scale_max: 1.15  # Upper amplitude scale when augmentation is enabled.
+  aug_noise: 0.02  # Waveform noise level when augmentation is enabled.
+  aug_shift_samples: 250  # Maximum time shift, measured in waveform samples.
+
+  # Training DataLoader settings.
+  train_loader:
+    num_workers: 12  # Increase only if storage and host memory allow it.
+    pin_memory: true
+    prefetch_factor: 2  # Batches prefetched per worker; needs num_workers > 0.
+    persistent_workers: true  # Keep workers alive between epochs.
+    shuffle: true
+    drop_last: true  # Keep equal physical batch sizes for contrastive training.
+    release_workers_before_val: false
+
+  # Validation and test DataLoader settings.
+  val_loader:
+    batch_size: 128  # Physical evaluation batch per process; reduce for memory.
+    num_workers: 4
+    pin_memory: false
+    persistent_workers: false
+    shuffle: false
+    drop_last: false  # False keeps every validation/test example.
+  text_separator: '[SEP]'  # Separates report and explanation for the Article encoder.
+  tgl_report_marker: 'report:'  # Literal prefix of the generated report region.
+  tgl_explanation_marker: 'explanation:'  # Literal prefix of the generated explanation region.
+  max_tgl_length: 512  # Maximum tokenized TGL target length.
+
+# ============================================================================
+# Optimization, validation-based checkpoint selection, and output paths.
+# ============================================================================
+# Composite weights below select checkpoints; they do not change train loss.
+train:
+  nan_debug: false
+  expected_mode: sgl+cgl  # Must match the --mode argument for this file.
+  epochs: 50  # Maximum epochs for this training stage.
+  batch_size: 108  # Physical training batch per GPU/process, before accumulation.
+  accumulation_steps: 2  # Optimizer batch = batch_size x this value x number of GPUs.
+  lr: 0.00015  # Base learning rate before per-component LR scales.
+  min_lr: 1.0e-06  # Learning-rate floor after scheduling.
+  weight_decay: 0.05  # Decay for enabled non-normalization parameter groups.
+  norm_weight_decay: 0.005  # Separate decay for normalization parameters.
+
+  # Weight-decay switches, in the exact order used by the optimizer.
+  wd_switches:
+  - true  # SGL proj1
+  - true  # CGL proj1
+  - true  # SGL proj2
+  - true  # fusion encoder
+  - true  # CGL matching/tracing heads
+  - true  # image encoder
+  - true  # signal encoder
+  - false  # TGL
+  adam_betas:  # AdamW first- and second-moment coefficients.
+  - 0.9
+  - 0.999
+  adam_eps: 1.0e-08
+  scheduler: cosine  # Learning-rate schedule after warmup.
+  warmup_steps: 0  # Takes precedence when greater than zero.
+  warmup_ratio: 0.03  # Used only when warmup_steps is zero.
+  lr_scale_encoder: 0.2  # Multiply base LR for unfrozen waveform/image encoders.
+  lr_scale_sgl: 0.01  # Multiply base LR for SGL parameters.
+  lr_scale_cgl: 1.0  # Multiply base LR for CGL parameters.
+  lr_scale_tgl: 0.0  # Multiply base LR for TGL parameters.
+  grad_clip_norm: 1.0  # Maximum global gradient norm.
+  fp16: false  # Use FP16 automatic mixed precision when enabled.
+  bf16: true  # Use BF16 automatic mixed precision when enabled.
+  amp_init_scale: 4096
+  amp_growth_interval: 8000
+  amp_backoff_factor: 0.5
+  nan_log_interval: 100
+  seed: 42  # Random seed; deterministic=false does not guarantee exact replay.
+  deterministic: false
+  benchmark: true
+  val_every_n_epochs: 1  # Run validation every N epochs.
+  early_stop_patience: 5  # Validation checks without checkpoint-score improvement.
+  composite_zeroshot_weight: 0.15  # Validation score weight for retrieval R@1.
+  composite_cgl_weight: 0.15  # Validation score weight for CGL matching accuracy.
+  composite_mlc_weight: 0.7  # Validation score weight for multilabel mAP.
+  composite_mlm_weight: 0  # Validation score weight for MLM accuracy.
+  composite_ar_weight: 0  # Validation score weight for inverse AR loss.
+  tgl_ablation_every_n: 0  # Zero disables the optional TGL ablation check.
+  output_dir: ./output/stage  # Base directory for stage checkpoints and logs.
+  run_name: lauer  # Run subdirectory beneath output_dir.

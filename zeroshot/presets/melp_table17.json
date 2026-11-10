@@ -1,0 +1,146 @@
+{
+  "schema_version": 2,
+  "protocol": "melp_table17",
+  "prompt_context": "source",
+  "description": "Directional groups derived from MELP Table 17. The table's CSN CLBBB is LBBB in the CSN split manifests.",
+  "pairs": {
+    "ptbxl_super_to_cpsc2018": {
+      "source_prediction_groups": {
+        "NORM": ["NORM"],
+        "CD": ["CD"],
+        "STTC": ["STTC"]
+      },
+      "target_truth_groups": {
+        "NORM": ["NORM"],
+        "CD": ["1AVB", "CRBBB"],
+        "STTC": ["STD", "STE"]
+      },
+      "aggregation": {
+        "NORM": "mean",
+        "CD": "mean",
+        "STTC": "mean"
+      }
+    },
+    "cpsc2018_to_ptbxl_super": {
+      "source_prediction_groups": {
+        "NORM": ["NORM"],
+        "CD": ["1AVB", "CRBBB"],
+        "STTC": ["STD", "STE"]
+      },
+      "target_truth_groups": {
+        "NORM": ["NORM"],
+        "CD": ["CD"],
+        "STTC": ["STTC"]
+      },
+      "aggregation": {
+        "NORM": "mean",
+        "CD": "mean",
+        "STTC": "mean"
+      }
+    },
+    "ptbxl_super_to_csn": {
+      "source_prediction_groups": {
+        "NORM": ["NORM"],
+        "HYP": ["HYP"],
+        "MI": ["MI"],
+        "CD": ["CD"],
+        "STTC": ["STTC"]
+      },
+      "target_truth_groups": {
+        "NORM": ["SR"],
+        "HYP": ["RVH", "LVH"],
+        "MI": ["MI"],
+        "CD": ["LBBB", "1AVB", "RBBB"],
+        "STTC": ["STE", "STTC", "STTU", "STDD", "TWO", "QTIE", "TWC"]
+      },
+      "aggregation": {
+        "NORM": "mean",
+        "HYP": "mean",
+        "MI": "mean",
+        "CD": "mean",
+        "STTC": "mean"
+      }
+    },
+    "csn_to_ptbxl_super": {
+      "source_prediction_groups": {
+        "NORM": ["SR"],
+        "HYP": ["RVH", "LVH"],
+        "MI": ["MI"],
+        "CD": ["LBBB", "1AVB", "RBBB"],
+        "STTC": ["STE", "STTC", "STTU", "STDD", "TWO", "QTIE", "TWC"]
+      },
+      "target_truth_groups": {
+        "NORM": ["NORM"],
+        "HYP": ["HYP"],
+        "MI": ["MI"],
+        "CD": ["CD"],
+        "STTC": ["STTC"]
+      },
+      "aggregation": {
+        "NORM": "mean",
+        "HYP": "mean",
+        "MI": "mean",
+        "CD": "mean",
+        "STTC": "mean"
+      }
+    },
+    "cpsc2018_to_csn": {
+      "source_prediction_groups": {
+        "AFIB": ["AFIB"],
+        "NORM": ["NORM"],
+        "VPC": ["VPC"],
+        "1AVB": ["1AVB"],
+        "CRBBB": ["CRBBB"],
+        "STE": ["STE"],
+        "STD": ["STD"]
+      },
+      "target_truth_groups": {
+        "AFIB": ["AFIB"],
+        "NORM": ["SR"],
+        "VPC": ["VPB"],
+        "1AVB": ["1AVB"],
+        "CRBBB": ["RBBB"],
+        "STE": ["STE"],
+        "STD": ["STE", "STTC", "STTU", "STDD"]
+      },
+      "aggregation": {
+        "AFIB": "mean",
+        "NORM": "mean",
+        "VPC": "mean",
+        "1AVB": "mean",
+        "CRBBB": "mean",
+        "STE": "mean",
+        "STD": "mean"
+      }
+    },
+    "csn_to_cpsc2018": {
+      "source_prediction_groups": {
+        "AFIB": ["AFIB"],
+        "NORM": ["SR"],
+        "VPC": ["VPB"],
+        "1AVB": ["1AVB"],
+        "CRBBB": ["RBBB"],
+        "STE": ["STE"],
+        "STD": ["STE", "STTC", "STTU", "STDD"]
+      },
+      "target_truth_groups": {
+        "AFIB": ["AFIB"],
+        "NORM": ["NORM"],
+        "VPC": ["VPC"],
+        "1AVB": ["1AVB"],
+        "CRBBB": ["CRBBB"],
+        "STE": ["STE"],
+        "STD": ["STD"]
+      },
+      "aggregation": {
+        "AFIB": "mean",
+        "NORM": "mean",
+        "VPC": "mean",
+        "1AVB": "mean",
+        "CRBBB": "mean",
+        "STE": "mean",
+        "STD": "mean"
+      }
+    }
+  }
+}

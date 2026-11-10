@@ -1,0 +1,60 @@
+{
+  "dataset": "CSN",
+  "aliases": [
+    "Chapman",
+    "Chapman-Shaoxing/Ningbo"
+  ],
+  "source": "MELP src/melp/data_split/chapman and dataset_class_names.json",
+  "task_type": "multi-label",
+  "labels": [
+    "AQW",
+    "UW",
+    "SR",
+    "WPW",
+    "2AVB",
+    "AT",
+    "VB",
+    "ARS",
+    "STTC",
+    "SA",
+    "STE",
+    "VPB",
+    "TWO",
+    "STTU",
+    "ALS",
+    "APB",
+    "2AVB1",
+    "PRIE",
+    "CCR",
+    "CR",
+    "AF",
+    "AVB",
+    "QTIE",
+    "LBBB",
+    "VEB",
+    "SVT",
+    "RBBB",
+    "1AVB",
+    "STDD",
+    "MI",
+    "AFIB",
+    "TWC",
+    "PWC",
+    "ERV",
+    "RVH",
+    "LVH",
+    "ST",
+    "JEB"
+  ],
+  "known_aliases": {
+    "CLBBB": "LBBB",
+    "VPC": "VPB",
+    "PAC": "APB"
+  },
+  "notes": [
+    "The MELP label order is authoritative for Table 3.",
+    "CSN_index_with_images.csv resolves image paths only and is not a label source.",
+    "The image-generation Top-38 set is different from the MELP 38-label set."
+  ]
+}
+

@@ -1,0 +1,9 @@
+{
+  "source": "MELP/src/melp/prompt/CKEPE_prompt.json",
+  "source_sha256": "3fefedc260aba243eb8a9e250c3dfd0f7658615b16f0a653b0b8e16e02237dd2",
+  "snapshot": "zeroshot/prompts/melp_ckepe.json",
+  "snapshot_sha256": "f3a73dae2305690a7774898c6815c31a6de5d286966927b590712a9f72750f8b",
+  "entry_count": 131,
+  "required_label_count": 86,
+  "missing_required_labels": []
+}

@@ -1,0 +1,11 @@
+{
+  "AFIB": "atrial fibrillation",
+  "VPC": "ventricular premature complex",
+  "NORM": "normal ECG",
+  "1AVB": "first-degree atrioventricular block",
+  "CRBBB": "right bundle branch block",
+  "STE": "ST-segment elevation",
+  "PAC": "atrial premature complex",
+  "CLBBB": "left bundle branch block",
+  "STD": "ST-segment depression"
+}
